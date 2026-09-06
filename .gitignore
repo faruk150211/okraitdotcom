@@ -1,6 +1,7 @@
 # Deployment scripts (upload to server manually, do not commit)
 /public/deploy.php
 /public/setup.php
+/public/artisan-web.php
 
 *.log
 .DS_Store

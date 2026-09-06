@@ -7,45 +7,57 @@ on:
 
 jobs:
   deploy:
-    name: Deploy Laravel App
+    name: Build & Deploy via FTP
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: Setup PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, gd, json
 
-      - name: Setup Node.js
+      - name: Install PHP dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install PHP dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-
-      - name: Install Node dependencies and build assets
+      - name: Build frontend assets
         run: |
           npm ci
           npm run build
 
-      - name: Trigger deployment webhook
-        run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "https://okrait.com/deploy.php" \
-            -H "X-Deploy-Token: ${{ secrets.DEPLOY_SECRET }}" \
-            --max-time 120)
+      - name: Deploy Laravel root files (excluding public/) via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./
+          server-dir: /
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            public/**
+            .env
+            *.log
 
-          echo "Webhook response code: $RESPONSE"
-
-          if [ "$RESPONSE" != "200" ]; then
-            echo "Deployment webhook failed with status: $RESPONSE"
-            exit 1
-          fi
-
-          echo "Deployment triggered successfully!"
+      - name: Deploy public/ folder to public_html/ via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./public/
+          server-dir: /public_html/
+          exclude: |
+            **/.git*
+            **/.git*/**
