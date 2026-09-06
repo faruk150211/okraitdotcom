@@ -1,0 +1,49 @@
+﻿name: Deploy to okrait.com
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Laravel App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+
+            echo "==> Navigating to app directory"
+            cd ${{ secrets.APP_PATH }}
+
+            echo "==> Pulling latest code from main"
+            git pull origin main
+
+            echo "==> Installing PHP dependencies"
+            composer install --no-dev --optimize-autoloader --no-interaction
+
+            echo "==> Installing Node dependencies and building assets"
+            npm ci
+            npm run build
+
+            echo "==> Running database migrations"
+            php artisan migrate --force
+
+            echo "==> Caching config, routes and views"
+            php artisan optimize
+
+            echo "==> Restarting queue workers (if any)"
+            php artisan queue:restart
+
+            echo "==> Deployment complete!"
