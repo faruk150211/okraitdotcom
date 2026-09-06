@@ -36,7 +36,8 @@ jobs:
 
       - name: Create deployment ZIP
         run: |
-          zip -q -r deploy.zip . -x "*.git*" "node_modules/*" ".env*" "*.log" "deploy.zip"
+          mkdir deploy_artifact
+          zip -q -r deploy_artifact/deploy.zip . -x "*.git*" "node_modules/*" ".env*" "*.log" "deploy_artifact/*"
 
       - name: Deploy ZIP via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -44,9 +45,5 @@ jobs:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./
+          local-dir: ./deploy_artifact/
           server-dir: /
-          exclude: |
-            **
-          include: |
-            deploy.zip
