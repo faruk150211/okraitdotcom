@@ -2,6 +2,8 @@
 /public/deploy.php
 /public/setup.php
 /public/artisan-web.php
+/public/unzip.php
+deploy.zip
 
 *.log
 .DS_Store

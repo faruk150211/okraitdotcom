@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Build & Deploy via FTP
+    name: Build & Deploy via FTP (ZIP)
     runs-on: ubuntu-latest
 
     steps:
@@ -18,7 +18,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, gd, json
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, gd, json, zip
 
       - name: Install PHP dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
@@ -34,7 +34,11 @@ jobs:
           npm ci
           npm run build
 
-      - name: Deploy Laravel root files (excluding public/) via FTP
+      - name: Create deployment ZIP
+        run: |
+          zip -q -r deploy.zip . -x "*.git*" "node_modules/*" ".env*" "*.log" "deploy.zip"
+
+      - name: Deploy ZIP via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_HOST }}
@@ -43,21 +47,6 @@ jobs:
           local-dir: ./
           server-dir: /
           exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            public/**
-            .env
-            *.log
-
-      - name: Deploy public/ folder to public_html/ via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./public/
-          server-dir: /public_html/
-          exclude: |
-            **/.git*
-            **/.git*/**
+            **
+          include: |
+            deploy.zip
